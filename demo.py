@@ -156,7 +156,8 @@ def main(args):
     model, criterion, postprocessors = build_model(args)
     model.to(device)
     checkpoint = torch.load(args.resume, map_location='cpu')
-    model.load_state_dict(checkpoint['model'], strict=False)
+    # model.load_state_dict(checkpoint['model'], strict=False)
+    model.load_state_dict(checkpoint, strict=False)
     if torch.cuda.is_available():
         model.cuda()
     model.eval()
