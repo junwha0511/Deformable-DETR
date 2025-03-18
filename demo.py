@@ -128,6 +128,8 @@ def get_args_parser():
     parser.add_argument('--num_workers', default=2, type=int)
     parser.add_argument('--cache_mode', default=False, action='store_true', help='whether to cache images on memory')
 
+    parser.add_argument('--box_threshold', default=0.35, type=float)
+
     return parser
 
 # standard PyTorch mean-std input image normalization
@@ -156,8 +158,10 @@ def main(args):
     model, criterion, postprocessors = build_model(args)
     model.to(device)
     checkpoint = torch.load(args.resume, map_location='cpu')
-    # model.load_state_dict(checkpoint['model'], strict=False)
-    model.load_state_dict(checkpoint, strict=False)
+    missing_keys, unexpected_keys = model.load_state_dict(checkpoint['model'], strict=False)
+    # print("Missing keys:", missing_keys)
+    # print("Unexpected keys:", unexpected_keys)
+
     if torch.cuda.is_available():
         model.cuda()
     model.eval()
@@ -170,7 +174,7 @@ def main(args):
     img=img.cuda()
     # propagate through the model
     outputs = model(img)
-
+    # print(outputs)
     out_logits, out_bbox = outputs['pred_logits'], outputs['pred_boxes']
 
     prob = out_logits.sigmoid()
@@ -181,7 +185,7 @@ def main(args):
     boxes = box_ops.box_cxcywh_to_xyxy(out_bbox)
     boxes = torch.gather(boxes, 1, topk_boxes.unsqueeze(-1).repeat(1,1,4))
 
-    keep = scores[0] > 0.35
+    keep = scores[0] > args.box_threshold
     boxes = boxes[0, keep]
     labels = labels[0, keep]
 
